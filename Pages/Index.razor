@@ -1,0 +1,77 @@
+﻿@page "/"
+@using ForecastApp.Models
+@using System.Text
+@inject HttpClient Http
+@inject IJSRuntime Js
+
+@if (forecast == null)
+{
+    <p>
+        <em>@message</em>
+    </p>
+}
+else
+{
+    <div class="card-group">
+        @foreach (var item in forecast.Daily.Take(5))
+        {
+            <DailyForecast
+                Seconds="@item.Dt"
+                LowTemp="@item.Temp.Min"
+                HighTemp="@item.Temp.Max"
+                Description="@item.Weather[0].Description"
+                Icon="@item.Weather[0].Icon"/>
+        }
+    </div>
+}
+
+@code {
+
+    string message = "Loading...";
+    Position pos;
+    OpenWeather forecast;
+
+    private async Task GetForecast()
+    {
+    // lat={lat}&lon={lon}&exclude={part}&appid={API key}
+        string APIkey = "5311eb7f79f937f3c7cee34bc6170494";
+
+        StringBuilder url = new StringBuilder();
+        url.Append("https://api.openweathermap.org/data/2.5/");
+        url.Append("onecall?");
+        url.Append("lat=");
+        url.Append(pos.Latitude);
+        url.Append("&lon=");
+        url.Append(pos.Longitude);
+        url.Append("&exclude=");
+        url.Append("current,minutely,hourly,alerts");
+        url.Append("&units=metric");
+        url.Append("&lang=sp");
+        url.Append("&appid=");
+        url.Append(APIkey);
+
+        forecast = await Http
+            .GetJsonAsync<OpenWeather>(url.ToString());
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await GetPosition();
+            await GetForecast();
+        }
+        catch (Exception)
+        {
+            message = "Error encountered";
+        }
+        ;
+    }
+
+    private async Task GetPosition()
+    {
+        pos = await Js.InvokeAsync<Position>(
+            "bweInterop.getPosition");
+    }
+
+}
